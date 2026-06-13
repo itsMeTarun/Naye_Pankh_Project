@@ -28,8 +28,8 @@ export default function Auth({ onNavigate, onLoginSuccess }) {
   const [error, setError] = useState('');
 
   // Form Fields
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@nayepankh.org');
+  const [password, setPassword] = useState('admin123');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [availability, setAvailability] = useState('Weekends');
@@ -123,7 +123,7 @@ export default function Auth({ onNavigate, onLoginSuccess }) {
         {/* Form Tabs */}
         <div style={styles.tabContainer}>
           <button 
-            onClick={() => { setIsLogin(true); setError(''); }}
+            onClick={() => { setIsLogin(true); setError(''); setEmail('admin@nayepankh.org'); setPassword('admin123'); }}
             style={{ 
               ...styles.tab, 
               borderBottomColor: isLogin ? 'var(--primary)' : 'transparent',
@@ -134,7 +134,7 @@ export default function Auth({ onNavigate, onLoginSuccess }) {
             <LogIn size={16} /> Login
           </button>
           <button 
-            onClick={() => { setIsLogin(false); setError(''); }}
+            onClick={() => { setIsLogin(false); setError(''); setEmail(''); setPassword(''); }}
             style={{ 
               ...styles.tab, 
               borderBottomColor: !isLogin ? 'var(--primary)' : 'transparent',
@@ -316,7 +316,7 @@ export default function Auth({ onNavigate, onLoginSuccess }) {
             <p>
               New to VoloSphere?{' '}
               <span 
-                onClick={() => { setIsLogin(false); setError(''); }} 
+                onClick={() => { setIsLogin(false); setError(''); setEmail(''); setPassword(''); }} 
                 style={styles.footerLink}
               >
                 Create an account
@@ -326,7 +326,7 @@ export default function Auth({ onNavigate, onLoginSuccess }) {
             <p>
               Already registered?{' '}
               <span 
-                onClick={() => { setIsLogin(true); setError(''); }} 
+                onClick={() => { setIsLogin(true); setError(''); setEmail('admin@nayepankh.org'); setPassword('admin123'); }} 
                 style={styles.footerLink}
               >
                 Sign in here
