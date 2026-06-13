@@ -5,7 +5,7 @@
       "email": "admin@nayepankh.org",
       "passwordHash": "$2a$10$qkmAK2iOn4P15lIOlac1te7q3jknGuEAInqUjsl0Hego1OwXEHCsC",
       "role": "admin",
-      "name": "Aditi Sharma",
+      "name": "admin",
       "createdAt": "2026-05-10T10:00:00.000Z"
     },
     {
@@ -43,11 +43,11 @@
       ],
       "status": "Approved",
       "bio": "Passionate about teaching children and helping the community grow.",
-      "hoursVolunteered": 12
+      "hoursVolunteered": 16
     },
     {
       "id": "v-1781345046753",
-      "hoursVolunteered": 0,
+      "hoursVolunteered": 4,
       "status": "Approved",
       "userId": "u-1781345046752",
       "name": "Aarav Mehta",
@@ -127,9 +127,17 @@
       "id": "a-2",
       "volunteerId": "v-2",
       "opportunityId": "o-2",
-      "status": "Approved",
+      "status": "Completed",
       "hoursLogged": 4,
       "appliedAt": "2026-06-04T10:00:00.000Z"
+    },
+    {
+      "id": "a-1781345789386",
+      "status": "Completed",
+      "hoursLogged": 4,
+      "appliedAt": "2026-06-13T10:16:29.386Z",
+      "volunteerId": "v-1781345046753",
+      "opportunityId": "o-1"
     }
   ]
 }

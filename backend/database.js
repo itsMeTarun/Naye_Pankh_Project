@@ -1,43 +1,122 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'db.json');
+dotenv.config();
 
-// Default initial state
-const getInitialState = () => {
-  const adminSalt = bcrypt.genSaltSync(10);
-  const adminHash = bcrypt.hashSync('admin123', adminSalt);
-  
-  const volunteerSalt = bcrypt.genSaltSync(10);
-  const volunteerHash = bcrypt.hashSync('volunteer123', volunteerSalt);
+const MONGODB_URI = process.env.MONGODB_URI;
 
-  return {
-    users: [
-      {
-        id: 'u-1',
+if (!MONGODB_URI) {
+  console.error('CRITICAL ERROR: MONGODB_URI is not defined in backend/.env file.');
+  process.exit(1);
+}
+
+// Connect to MongoDB Atlas
+mongoose.connect(MONGODB_URI)
+  .then(async () => {
+    console.log('Successfully connected to MongoDB Atlas.');
+    await seedDatabase();
+  })
+  .catch(err => {
+    console.error('MongoDB Atlas connection error:', err);
+  });
+
+// Schema serialization options to support 'id' virtual mapping instead of breaking frontend '_id' expects
+const schemaOptions = {
+  toJSON: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id.toString();
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  },
+  toObject: {
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id.toString();
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
+};
+
+// Define Mongoose Schemas
+const User = mongoose.model('User', new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  passwordHash: { type: String, required: true },
+  role: { type: String, required: true, enum: ['admin', 'volunteer'] },
+  name: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+}, schemaOptions));
+
+const Volunteer = mongoose.model('Volunteer', new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  name: { type: String, required: true },
+  phone: { type: String, default: '' },
+  skills: { type: [String], default: [] },
+  availability: { type: String, default: 'Weekends' },
+  interests: { type: [String], default: [] },
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+  bio: { type: String, default: '' },
+  hoursVolunteered: { type: Number, default: 0 }
+}, schemaOptions));
+
+const Opportunity = mongoose.model('Opportunity', new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  date: { type: String, required: true },
+  location: { type: String, required: true },
+  duration: { type: String, default: '2 hours' },
+  requiredVolunteers: { type: Number, default: 5 },
+  category: { type: String, required: true },
+  status: { type: String, enum: ['Active', 'Completed', 'Cancelled'], default: 'Active' },
+  createdAt: { type: Date, default: Date.now }
+}, schemaOptions));
+
+const Application = mongoose.model('Application', new mongoose.Schema({
+  volunteerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Volunteer', required: true },
+  opportunityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Opportunity', required: true },
+  status: { type: String, enum: ['Pending', 'Approved', 'Completed', 'Rejected'], default: 'Pending' },
+  hoursLogged: { type: Number, default: 0 },
+  appliedAt: { type: Date, default: Date.now }
+}, schemaOptions));
+
+// Automatic Data Seeder
+const seedDatabase = async () => {
+  try {
+    const userCount = await User.countDocuments();
+    if (userCount === 0) {
+      console.log('Seeding initial MongoDB data...');
+
+      const adminSalt = bcrypt.genSaltSync(10);
+      const adminHash = bcrypt.hashSync('admin123', adminSalt);
+      
+      const volunteerSalt = bcrypt.genSaltSync(10);
+      const volunteerHash = bcrypt.hashSync('volunteer123', volunteerSalt);
+
+      // 1. Create Default Users
+      const adminUser = await User.create({
         email: 'admin@nayepankh.org',
         passwordHash: adminHash,
         role: 'admin',
-        name: 'Aditi Sharma',
+        name: 'admin',
         createdAt: '2026-05-10T10:00:00.000Z'
-      },
-      {
-        id: 'u-2',
+      });
+
+      const volunteerUser = await User.create({
         email: 'rahul.verma@gmail.com',
         passwordHash: volunteerHash,
         role: 'volunteer',
         name: 'Rahul Verma',
         createdAt: '2026-06-01T14:30:00.000Z'
-      }
-    ],
-    volunteers: [
-      {
-        id: 'v-2',
-        userId: 'u-2',
+      });
+
+      // 2. Create Volunteer Profile
+      const volunteerProfile = await Volunteer.create({
+        userId: volunteerUser._id,
         name: 'Rahul Verma',
         phone: '+91 98765 43210',
         skills: ['Teaching', 'Public Speaking', 'Social Media'],
@@ -46,11 +125,10 @@ const getInitialState = () => {
         status: 'Approved',
         bio: 'Passionate about teaching children and helping the community grow.',
         hoursVolunteered: 12
-      }
-    ],
-    opportunities: [
-      {
-        id: 'o-1',
+      });
+
+      // 3. Create Default Opportunities
+      const opp1 = await Opportunity.create({
         title: 'Education for All Campaign',
         description: 'Teach basic mathematics, English, and science to children from underprivileged backgrounds in rural communities. All materials will be provided.',
         date: '2026-06-20',
@@ -60,9 +138,9 @@ const getInitialState = () => {
         category: 'Education',
         status: 'Active',
         createdAt: '2026-06-05T09:00:00.000Z'
-      },
-      {
-        id: 'o-2',
+      });
+
+      const opp2 = await Opportunity.create({
         title: 'Weekly Food Distribution Drive',
         description: 'Join us in packaging and distributing nutritious warm meals to shelter homes and slum areas across Delhi NCR.',
         date: '2026-06-25',
@@ -72,9 +150,9 @@ const getInitialState = () => {
         category: 'Food Relief',
         status: 'Active',
         createdAt: '2026-06-06T10:30:00.000Z'
-      },
-      {
-        id: 'o-3',
+      });
+
+      const opp3 = await Opportunity.create({
         title: 'Environment & Tree Plantation Drive',
         description: 'Planting saplings and cleaning up local parks. Help us restore urban green cover and raise environmental awareness.',
         date: '2026-07-02',
@@ -84,9 +162,9 @@ const getInitialState = () => {
         category: 'Environment',
         status: 'Active',
         createdAt: '2026-06-07T11:15:00.000Z'
-      },
-      {
-        id: 'o-4',
+      });
+
+      const opp4 = await Opportunity.create({
         title: 'Free Health Screening Camp',
         description: 'Assisting medical practitioners in organizing queue management, patient registration, and distributing free basic medicines.',
         date: '2026-06-18',
@@ -96,231 +174,158 @@ const getInitialState = () => {
         category: 'Healthcare',
         status: 'Active',
         createdAt: '2026-06-08T12:00:00.000Z'
-      }
-    ],
-    applications: [
-      {
-        id: 'a-1',
-        volunteerId: 'v-2',
-        opportunityId: 'o-1',
+      });
+
+      // 4. Create Default Applications
+      await Application.create({
+        volunteerId: volunteerProfile._id,
+        opportunityId: opp1._id,
         status: 'Completed',
         hoursLogged: 8,
         appliedAt: '2026-06-02T15:00:00.000Z'
-      },
-      {
-        id: 'a-2',
-        volunteerId: 'v-2',
-        opportunityId: 'o-2',
+      });
+
+      await Application.create({
+        volunteerId: volunteerProfile._id,
+        opportunityId: opp2._id,
         status: 'Approved',
         hoursLogged: 4,
         appliedAt: '2026-06-04T10:00:00.000Z'
-      }
-    ]
-  };
+      });
+
+      console.log('MongoDB initialization: Seed data successfully loaded.');
+    }
+  } catch (error) {
+    console.error('MongoDB initialization error during seeding:', error);
+  }
 };
 
-// Database class
-class JSONDatabase {
-  constructor() {
-    this.data = null;
-    this.init();
-  }
-
-  init() {
-    try {
-      if (fs.existsSync(DB_FILE)) {
-        const fileContent = fs.readFileSync(DB_FILE, 'utf8');
-        this.data = JSON.parse(fileContent);
-      } else {
-        this.data = getInitialState();
-        this.save();
-      }
-    } catch (error) {
-      console.error('Failed to initialize database, using memory-fallback:', error);
-      this.data = getInitialState();
-    }
-  }
-
-  save() {
-    try {
-      fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2), 'utf8');
-    } catch (error) {
-      console.error('Failed to save database:', error);
-    }
-  }
-
+// Database operation wrapper class
+class MongoDatabase {
   // User operations
-  getUsers() {
-    return this.data.users;
+  async getUsers() {
+    return await User.find({});
   }
 
-  getUserByEmail(email) {
-    return this.data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  async getUserByEmail(email) {
+    if (!email) return null;
+    return await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
   }
 
-  createUser(user) {
-    const newUser = {
-      id: `u-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      ...user
-    };
-    this.data.users.push(newUser);
-    this.save();
-    return newUser;
+  async createUser(user) {
+    const newUser = new User(user);
+    return await newUser.save();
   }
 
   // Volunteer operations
-  getVolunteers() {
-    return this.data.volunteers;
+  async getVolunteers() {
+    return await Volunteer.find({});
   }
 
-  getVolunteerById(id) {
-    return this.data.volunteers.find(v => v.id === id);
+  async getVolunteerById(id) {
+    if (!mongoose.isValidObjectId(id)) return null;
+    return await Volunteer.findById(id);
   }
 
-  getVolunteerByUserId(userId) {
-    return this.data.volunteers.find(v => v.userId === userId);
+  async getVolunteerByUserId(userId) {
+    if (!mongoose.isValidObjectId(userId)) return null;
+    return await Volunteer.findOne({ userId });
   }
 
-  createVolunteer(volunteer) {
-    const newVol = {
-      id: `v-${Date.now()}`,
-      hoursVolunteered: 0,
-      status: 'Pending', // Pending, Approved, Rejected
-      ...volunteer
-    };
-    this.data.volunteers.push(newVol);
-    this.save();
-    return newVol;
+  async createVolunteer(volunteer) {
+    const newVol = new Volunteer(volunteer);
+    return await newVol.save();
   }
 
-  updateVolunteer(id, updates) {
-    const volIndex = this.data.volunteers.findIndex(v => v.id === id);
-    if (volIndex !== -1) {
-      this.data.volunteers[volIndex] = {
-        ...this.data.volunteers[volIndex],
-        ...updates
-      };
-      this.save();
-      return this.data.volunteers[volIndex];
-    }
-    return null;
+  async updateVolunteer(id, updates) {
+    if (!mongoose.isValidObjectId(id)) return null;
+    return await Volunteer.findByIdAndUpdate(id, { $set: updates }, { new: true });
   }
 
   // Opportunity operations
-  getOpportunities() {
-    return this.data.opportunities;
+  async getOpportunities() {
+    return await Opportunity.find({});
   }
 
-  getOpportunityById(id) {
-    return this.data.opportunities.find(o => o.id === id);
+  async getOpportunityById(id) {
+    if (!mongoose.isValidObjectId(id)) return null;
+    return await Opportunity.findById(id);
   }
 
-  createOpportunity(opp) {
-    const newOpp = {
-      id: `o-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      status: 'Active',
-      ...opp
-    };
-    this.data.opportunities.push(newOpp);
-    this.save();
-    return newOpp;
+  async createOpportunity(opp) {
+    const newOpp = new Opportunity(opp);
+    return await newOpp.save();
   }
 
-  updateOpportunity(id, updates) {
-    const index = this.data.opportunities.findIndex(o => o.id === id);
-    if (index !== -1) {
-      this.data.opportunities[index] = {
-        ...this.data.opportunities[index],
-        ...updates
-      };
-      this.save();
-      return this.data.opportunities[index];
-    }
-    return null;
+  async updateOpportunity(id, updates) {
+    if (!mongoose.isValidObjectId(id)) return null;
+    return await Opportunity.findByIdAndUpdate(id, { $set: updates }, { new: true });
   }
 
-  deleteOpportunity(id) {
-    const index = this.data.opportunities.findIndex(o => o.id === id);
-    if (index !== -1) {
-      // Also delete/archive applications for this opportunity
-      this.data.applications = this.data.applications.filter(a => a.opportunityId !== id);
-      const deleted = this.data.opportunities.splice(index, 1);
-      this.save();
-      return deleted[0];
-    }
-    return null;
+  async deleteOpportunity(id) {
+    if (!mongoose.isValidObjectId(id)) return null;
+    // Delete applications referencing this drive
+    await Application.deleteMany({ opportunityId: id });
+    return await Opportunity.findByIdAndDelete(id);
   }
 
   // Application operations
-  getApplications() {
-    return this.data.applications;
+  async getApplications() {
+    return await Application.find({});
   }
 
-  createApplication(app) {
+  async createApplication(app) {
     // Check if duplicate exists
-    const duplicate = this.data.applications.find(
-      a => a.volunteerId === app.volunteerId && a.opportunityId === app.opportunityId
-    );
+    const duplicate = await Application.findOne({
+      volunteerId: app.volunteerId,
+      opportunityId: app.opportunityId
+    });
     if (duplicate) return duplicate;
 
-    const newApp = {
-      id: `a-${Date.now()}`,
-      status: 'Pending', // Pending, Approved, Completed, Rejected
-      hoursLogged: 0,
-      appliedAt: new Date().toISOString(),
-      ...app
-    };
-    this.data.applications.push(newApp);
-    this.save();
-    return newApp;
+    const newApp = new Application(app);
+    return await newApp.save();
   }
 
-  updateApplication(id, updates) {
-    const index = this.data.applications.findIndex(a => a.id === id);
-    if (index !== -1) {
-      const oldApp = this.data.applications[index];
-      const updatedApp = {
-        ...oldApp,
-        ...updates
-      };
-      this.data.applications[index] = updatedApp;
+  async updateApplication(id, updates) {
+    if (!mongoose.isValidObjectId(id)) return null;
+    const oldApp = await Application.findById(id);
+    if (!oldApp) return null;
 
-      // If status changed to Completed and hours were logged, update volunteer's lifetime hours
-      if (updates.status === 'Completed' && oldApp.status !== 'Completed') {
-        const vol = this.getVolunteerById(updatedApp.volunteerId);
-        if (vol) {
-          const hours = Number(updatedApp.hoursLogged) || 0;
-          this.updateVolunteer(vol.id, {
-            hoursVolunteered: (vol.hoursVolunteered || 0) + hours
-          });
-        }
-      } else if (updates.status !== 'Completed' && oldApp.status === 'Completed') {
-        // If status was changed back from Completed
-        const vol = this.getVolunteerById(oldApp.volunteerId);
-        if (vol) {
-          const hours = Number(oldApp.hoursLogged) || 0;
-          this.updateVolunteer(vol.id, {
-            hoursVolunteered: Math.max(0, (vol.hoursVolunteered || 0) - hours)
-          });
-        }
-      } else if (updates.hoursLogged !== undefined && oldApp.status === 'Completed') {
-        // If hours logged changed while it is already in Completed status
-        const vol = this.getVolunteerById(updatedApp.volunteerId);
-        if (vol) {
-          const diff = (Number(updates.hoursLogged) || 0) - (Number(oldApp.hoursLogged) || 0);
-          this.updateVolunteer(vol.id, {
-            hoursVolunteered: Math.max(0, (vol.hoursVolunteered || 0) + diff)
-          });
-        }
+    const updatedApp = await Application.findByIdAndUpdate(id, { $set: updates }, { new: true });
+
+    // Handle lifetime hour changes when completion status shifts
+    if (updates.status === 'Completed' && oldApp.status !== 'Completed') {
+      const vol = await Volunteer.findById(updatedApp.volunteerId);
+      if (vol) {
+        const hours = Number(updatedApp.hoursLogged) || 0;
+        await Volunteer.findByIdAndUpdate(vol.id, {
+          $inc: { hoursVolunteered: hours }
+        });
       }
-
-      this.save();
-      return updatedApp;
+    } else if (updates.status !== 'Completed' && oldApp.status === 'Completed') {
+      // If status was changed back from Completed
+      const vol = await Volunteer.findById(oldApp.volunteerId);
+      if (vol) {
+        const hours = Number(oldApp.hoursLogged) || 0;
+        const newHours = Math.max(0, (vol.hoursVolunteered || 0) - hours);
+        await Volunteer.findByIdAndUpdate(vol.id, {
+          hoursVolunteered: newHours
+        });
+      }
+    } else if (updates.hoursLogged !== undefined && oldApp.status === 'Completed') {
+      // If hours logged changed while already completed
+      const vol = await Volunteer.findById(updatedApp.volunteerId);
+      if (vol) {
+        const diff = (Number(updates.hoursLogged) || 0) - (Number(oldApp.hoursLogged) || 0);
+        const newHours = Math.max(0, (vol.hoursVolunteered || 0) + diff);
+        await Volunteer.findByIdAndUpdate(vol.id, {
+          hoursVolunteered: newHours
+        });
+      }
     }
-    return null;
+
+    return updatedApp;
   }
 }
 
-export const db = new JSONDatabase();
+export const db = new MongoDatabase();

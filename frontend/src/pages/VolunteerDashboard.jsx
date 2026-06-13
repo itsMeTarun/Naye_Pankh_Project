@@ -12,7 +12,9 @@ import {
   Edit,
   Save,
   Check,
-  ClipboardList
+  ClipboardList,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 const AVAILABLE_SKILLS = [
@@ -35,7 +37,7 @@ const INTERESTS = [
   'Women Empowerment'
 ];
 
-export default function VolunteerDashboard({ onNavigate, user, onLogout }) {
+export default function VolunteerDashboard({ onNavigate, user, onLogout, accent, mode, onSelectAccent, onToggleMode }) {
   const [activeTab, setActiveTab] = useState('profile');
   const [volunteer, setVolunteer] = useState(null);
   const [applications, setApplications] = useState([]);
@@ -144,7 +146,7 @@ export default function VolunteerDashboard({ onNavigate, user, onLogout }) {
     return (
       <div className="flex-center" style={{ minHeight: '100vh', flexDirection: 'column', gap: '1rem' }}>
         <div style={styles.spinner}></div>
-        <p style={{ color: 'var(--text-secondary)' }}>Loading volunteer portal...</p>
+        <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Asking the database nicely for your dashboard...</p>
       </div>
     );
   }
@@ -167,6 +169,59 @@ export default function VolunteerDashboard({ onNavigate, user, onLogout }) {
           </div>
 
           <div style={styles.userInfo}>
+            {/* Light/Dark Mode toggle */}
+            <button
+              onClick={onToggleMode}
+              className="btn btn-secondary"
+              style={{ 
+                padding: '0.4rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                borderRadius: '50%', 
+                width: '36px', 
+                height: '36px',
+                cursor: 'pointer',
+                boxShadow: 'none',
+                marginRight: '0.4rem'
+              }}
+              title="Toggle Light/Dark Mode"
+              id="volunteer-mode-btn"
+            >
+              {mode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
+
+            {/* Color Accent dots */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginRight: '0.5rem' }}>
+              {['indigo', 'emerald', 'sunset'].map(a => {
+                const dotColors = {
+                  indigo: '#6366f1',
+                  emerald: '#10b981',
+                  sunset: '#f97316'
+                };
+                const active = accent === a;
+                return (
+                  <button
+                    key={a}
+                    onClick={() => onSelectAccent(a)}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: active ? '2px solid var(--text-primary)' : '2px solid transparent',
+                      background: dotColors[a],
+                      cursor: 'pointer',
+                      padding: 0,
+                      boxShadow: active ? `0 0 8px ${dotColors[a]}` : 'none',
+                      transition: 'all 0.2s',
+                      transform: active ? 'scale(1.15)' : 'scale(1)'
+                    }}
+                    title={`${a.charAt(0).toUpperCase() + a.slice(1)} Accent`}
+                  />
+                );
+              })}
+            </div>
+
             <div style={styles.userAvatar}>
               <User size={18} color="#fff" />
             </div>

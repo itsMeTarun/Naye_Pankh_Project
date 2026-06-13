@@ -47,7 +47,7 @@ const requireAdmin = (req, res, next) => {
 // --- AUTHENTICATION ROUTES ---
 
 // Public: Register Volunteer
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password, name, phone, skills, availability, interests, bio } = req.body;
 
@@ -55,7 +55,7 @@ app.post('/api/auth/register', (req, res) => {
       return res.status(400).json({ message: 'Name, email, and password are required' });
     }
 
-    const existingUser = db.getUserByEmail(email);
+    const existingUser = await db.getUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: 'A user with this email already exists' });
     }
@@ -65,7 +65,7 @@ app.post('/api/auth/register', (req, res) => {
     const passwordHash = bcrypt.hashSync(password, salt);
 
     // Create User record
-    const user = db.createUser({
+    const user = await db.createUser({
       email,
       passwordHash,
       role: 'volunteer',
@@ -73,7 +73,7 @@ app.post('/api/auth/register', (req, res) => {
     });
 
     // Create Volunteer profile linked to user
-    const volunteer = db.createVolunteer({
+    const volunteer = await db.createVolunteer({
       userId: user.id,
       name,
       phone: phone || '',
@@ -98,7 +98,7 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 // Public: Login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -106,7 +106,7 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = db.getUserByEmail(email);
+    const user = await db.getUserByEmail(email);
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -121,7 +121,7 @@ app.post('/api/auth/login', (req, res) => {
 
     let volunteer = null;
     if (user.role === 'volunteer') {
-      volunteer = db.getVolunteerByUserId(user.id);
+      volunteer = await db.getVolunteerByUserId(user.id);
     }
 
     res.json({
@@ -136,16 +136,17 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // Authenticated: Get Me
-app.get('/api/auth/me', authenticateToken, (req, res) => {
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    const userRecord = db.getUsers().find(u => u.id === req.user.id);
+    const allUsers = await db.getUsers();
+    const userRecord = allUsers.find(u => u.id === req.user.id);
     if (!userRecord) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     let volunteer = null;
     if (userRecord.role === 'volunteer') {
-      volunteer = db.getVolunteerByUserId(userRecord.id);
+      volunteer = await db.getVolunteerByUserId(userRecord.id);
     }
 
     res.json({
@@ -153,6 +154,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
       volunteer
     });
   } catch (error) {
+    console.error('Get Me error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -161,9 +163,9 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
 // --- PUBLIC DRIVES ROUTES ---
 
 // Public: Get all drives
-app.get('/api/opportunities', (req, res) => {
+app.get('/api/opportunities', async (req, res) => {
   try {
-    const opps = db.getOpportunities();
+    const opps = await db.getOpportunities();
     res.json(opps);
   } catch (error) {
     res.status(500).json({ message: 'Failed to retrieve opportunities' });
@@ -174,16 +176,21 @@ app.get('/api/opportunities', (req, res) => {
 // --- VOLUNTEER ROUTES ---
 
 // Helper to check and retrieve volunteer profile
-const getReqVolunteer = (req, res, next) => {
-  if (req.user.role !== 'volunteer') {
-    return res.status(403).json({ message: 'Required volunteer role' });
+const getReqVolunteer = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'volunteer') {
+      return res.status(403).json({ message: 'Required volunteer role' });
+    }
+    const vol = await db.getVolunteerByUserId(req.user.id);
+    if (!vol) {
+      return res.status(404).json({ message: 'Volunteer profile not found' });
+    }
+    req.volunteer = vol;
+    next();
+  } catch (error) {
+    console.error('Middleware helper volunteer error:', error);
+    res.status(500).json({ message: 'Internal middleware retrieval error' });
   }
-  const vol = db.getVolunteerByUserId(req.user.id);
-  if (!vol) {
-    return res.status(404).json({ message: 'Volunteer profile not found' });
-  }
-  req.volunteer = vol;
-  next();
 };
 
 // Volunteer: Get profile
@@ -192,10 +199,10 @@ app.get('/api/volunteer/profile', authenticateToken, getReqVolunteer, (req, res)
 });
 
 // Volunteer: Update profile
-app.post('/api/volunteer/profile', authenticateToken, getReqVolunteer, (req, res) => {
+app.post('/api/volunteer/profile', authenticateToken, getReqVolunteer, async (req, res) => {
   try {
     const { phone, skills, availability, interests, bio } = req.body;
-    const updated = db.updateVolunteer(req.volunteer.id, {
+    const updated = await db.updateVolunteer(req.volunteer.id, {
       phone: phone !== undefined ? phone : req.volunteer.phone,
       skills: skills !== undefined ? skills : req.volunteer.skills,
       availability: availability !== undefined ? availability : req.volunteer.availability,
@@ -209,28 +216,30 @@ app.post('/api/volunteer/profile', authenticateToken, getReqVolunteer, (req, res
 });
 
 // Volunteer: View application history
-app.get('/api/volunteer/applications', authenticateToken, getReqVolunteer, (req, res) => {
+app.get('/api/volunteer/applications', authenticateToken, getReqVolunteer, async (req, res) => {
   try {
-    const apps = db.getApplications().filter(a => a.volunteerId === req.volunteer.id);
-    const opportunities = db.getOpportunities();
+    const allApps = await db.getApplications();
+    const apps = allApps.filter(a => a.volunteerId.toString() === req.volunteer.id.toString());
+    const opportunities = await db.getOpportunities();
 
     // Map opportunity details into application
     const detailedApps = apps.map(app => {
-      const opp = opportunities.find(o => o.id === app.opportunityId);
+      const opp = opportunities.find(o => o.id.toString() === app.opportunityId.toString());
       return {
-        ...app,
+        ...app.toJSON(),
         opportunity: opp || null
       };
     });
 
     res.json(detailedApps);
   } catch (error) {
+    console.error('Retrieve apps error:', error);
     res.status(500).json({ message: 'Failed to retrieve applications' });
   }
 });
 
 // Volunteer: Apply for a drive
-app.post('/api/volunteer/applications', authenticateToken, getReqVolunteer, (req, res) => {
+app.post('/api/volunteer/applications', authenticateToken, getReqVolunteer, async (req, res) => {
   try {
     const { opportunityId } = req.body;
     if (!opportunityId) {
@@ -238,7 +247,7 @@ app.post('/api/volunteer/applications', authenticateToken, getReqVolunteer, (req
     }
 
     // Verify opportunity exists and is active
-    const opp = db.getOpportunityById(opportunityId);
+    const opp = await db.getOpportunityById(opportunityId);
     if (!opp) {
       return res.status(404).json({ message: 'Volunteer drive not found' });
     }
@@ -252,7 +261,7 @@ app.post('/api/volunteer/applications', authenticateToken, getReqVolunteer, (req
       return res.status(403).json({ message: 'Your volunteer registration is pending approval or has been rejected. You can apply for drives once an admin approves your profile.' });
     }
 
-    const application = db.createApplication({
+    const application = await db.createApplication({
       volunteerId: req.volunteer.id,
       opportunityId
     });
@@ -267,11 +276,11 @@ app.post('/api/volunteer/applications', authenticateToken, getReqVolunteer, (req
 // --- ADMIN ROUTES ---
 
 // Admin: Get Dashboard Stats
-app.get('/api/admin/stats', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const volunteers = db.getVolunteers();
-    const opportunities = db.getOpportunities();
-    const applications = db.getApplications();
+    const volunteers = await db.getVolunteers();
+    const opportunities = await db.getOpportunities();
+    const applications = await db.getApplications();
 
     const totalVolunteers = volunteers.length;
     const pendingVolunteers = volunteers.filter(v => v.status === 'Pending').length;
@@ -283,8 +292,8 @@ app.get('/api/admin/stats', authenticateToken, requireAdmin, (req, res) => {
       .reduce((sum, a) => sum + (Number(a.hoursLogged) || 0), 0);
 
     // Dynamic charts data preparation:
-    // 1. Registrations over time (monthly, based on user createdAt)
-    const users = db.getUsers().filter(u => u.role === 'volunteer');
+    const allUsers = await db.getUsers();
+    const users = allUsers.filter(u => u.role === 'volunteer');
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const monthlyRegs = Array(12).fill(0);
     
@@ -294,11 +303,6 @@ app.get('/api/admin/stats', authenticateToken, requireAdmin, (req, res) => {
         monthlyRegs[date.getMonth()] += 1;
       }
     });
-
-    const chartRegistrations = months.map((name, index) => ({
-      name,
-      count: monthlyRegs[index]
-    })).slice(4, 7); // Filter only May, June, July for presentation density, or send full list
 
     // 2. Opportunities by category
     const categoryCounts = {};
@@ -338,15 +342,15 @@ app.get('/api/admin/stats', authenticateToken, requireAdmin, (req, res) => {
 });
 
 // Admin: List all volunteers
-app.get('/api/admin/volunteers', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/volunteers', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const volunteers = db.getVolunteers();
-    const users = db.getUsers();
+    const volunteers = await db.getVolunteers();
+    const users = await db.getUsers();
 
     const detailedVols = volunteers.map(vol => {
-      const user = users.find(u => u.id === vol.userId);
+      const user = users.find(u => u.id.toString() === vol.userId.toString());
       return {
-        ...vol,
+        ...vol.toJSON(),
         email: user ? user.email : 'N/A'
       };
     });
@@ -358,14 +362,14 @@ app.get('/api/admin/volunteers', authenticateToken, requireAdmin, (req, res) => 
 });
 
 // Admin: Update volunteer status (Approve/Reject)
-app.put('/api/admin/volunteers/:id/status', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/admin/volunteers/:id/status', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     if (!['Pending', 'Approved', 'Rejected'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
-    const updated = db.updateVolunteer(req.params.id, { status });
+    const updated = await db.updateVolunteer(req.params.id, { status });
     if (!updated) {
       return res.status(404).json({ message: 'Volunteer profile not found' });
     }
@@ -377,7 +381,7 @@ app.put('/api/admin/volunteers/:id/status', authenticateToken, requireAdmin, (re
 });
 
 // Admin: Edit volunteer profile
-app.put('/api/admin/volunteers/:id', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/admin/volunteers/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { name, phone, skills, availability, interests, bio, hoursVolunteered } = req.body;
     
@@ -390,7 +394,7 @@ app.put('/api/admin/volunteers/:id', authenticateToken, requireAdmin, (req, res)
     if (bio !== undefined) updates.bio = bio;
     if (hoursVolunteered !== undefined) updates.hoursVolunteered = Number(hoursVolunteered);
 
-    const updated = db.updateVolunteer(req.params.id, updates);
+    const updated = await db.updateVolunteer(req.params.id, updates);
     if (!updated) {
       return res.status(404).json({ message: 'Volunteer profile not found' });
     }
@@ -402,21 +406,21 @@ app.put('/api/admin/volunteers/:id', authenticateToken, requireAdmin, (req, res)
 });
 
 // Admin: List all applications
-app.get('/api/admin/applications', authenticateToken, requireAdmin, (req, res) => {
+app.get('/api/admin/applications', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const apps = db.getApplications();
-    const volunteers = db.getVolunteers();
-    const users = db.getUsers();
-    const opportunities = db.getOpportunities();
+    const apps = await db.getApplications();
+    const volunteers = await db.getVolunteers();
+    const users = await db.getUsers();
+    const opportunities = await db.getOpportunities();
 
     const detailedApps = apps.map(app => {
-      const vol = volunteers.find(v => v.id === app.volunteerId);
-      const user = vol ? users.find(u => u.id === vol.userId) : null;
-      const opp = opportunities.find(o => o.id === app.opportunityId);
+      const vol = volunteers.find(v => v.id.toString() === app.volunteerId.toString());
+      const user = vol ? users.find(u => u.id.toString() === vol.userId.toString()) : null;
+      const opp = opportunities.find(o => o.id.toString() === app.opportunityId.toString());
 
       return {
-        ...app,
-        volunteer: vol ? { ...vol, email: user ? user.email : 'N/A' } : null,
+        ...app.toJSON(),
+        volunteer: vol ? { ...vol.toJSON(), email: user ? user.email : 'N/A' } : null,
         opportunity: opp || null
       };
     });
@@ -428,7 +432,7 @@ app.get('/api/admin/applications', authenticateToken, requireAdmin, (req, res) =
 });
 
 // Admin: Update application status (Approve / Complete / Reject) and log hours
-app.put('/api/admin/applications/:id', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/admin/applications/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { status, hoursLogged } = req.body;
     
@@ -443,7 +447,7 @@ app.put('/api/admin/applications/:id', authenticateToken, requireAdmin, (req, re
       updates.hoursLogged = Number(hoursLogged);
     }
 
-    const updated = db.updateApplication(req.params.id, updates);
+    const updated = await db.updateApplication(req.params.id, updates);
     if (!updated) {
       return res.status(404).json({ message: 'Application not found' });
     }
@@ -455,7 +459,7 @@ app.put('/api/admin/applications/:id', authenticateToken, requireAdmin, (req, re
 });
 
 // Admin: Create drive
-app.post('/api/admin/opportunities', authenticateToken, requireAdmin, (req, res) => {
+app.post('/api/admin/opportunities', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { title, description, date, location, duration, requiredVolunteers, category } = req.body;
 
@@ -463,7 +467,7 @@ app.post('/api/admin/opportunities', authenticateToken, requireAdmin, (req, res)
       return res.status(400).json({ message: 'Title, Date, Location, and Category are required' });
     }
 
-    const opp = db.createOpportunity({
+    const opp = await db.createOpportunity({
       title,
       description: description || '',
       date,
@@ -480,7 +484,7 @@ app.post('/api/admin/opportunities', authenticateToken, requireAdmin, (req, res)
 });
 
 // Admin: Update drive
-app.put('/api/admin/opportunities/:id', authenticateToken, requireAdmin, (req, res) => {
+app.put('/api/admin/opportunities/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { title, description, date, location, duration, requiredVolunteers, category, status } = req.body;
 
@@ -499,7 +503,7 @@ app.put('/api/admin/opportunities/:id', authenticateToken, requireAdmin, (req, r
       updates.status = status;
     }
 
-    const updated = db.updateOpportunity(req.params.id, updates);
+    const updated = await db.updateOpportunity(req.params.id, updates);
     if (!updated) {
       return res.status(404).json({ message: 'Opportunity not found' });
     }
@@ -511,9 +515,9 @@ app.put('/api/admin/opportunities/:id', authenticateToken, requireAdmin, (req, r
 });
 
 // Admin: Delete drive
-app.delete('/api/admin/opportunities/:id', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/admin/opportunities/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const deleted = db.deleteOpportunity(req.params.id);
+    const deleted = await db.deleteOpportunity(req.params.id);
     if (!deleted) {
       return res.status(404).json({ message: 'Opportunity not found' });
     }

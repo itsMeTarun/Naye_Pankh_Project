@@ -11,10 +11,12 @@ import {
   Heart,
   TrendingUp,
   LogIn,
-  Layers
+  Layers,
+  Sun,
+  Moon
 } from 'lucide-react';
 
-export default function LandingPage({ onNavigate, user, onLogout }) {
+export default function LandingPage({ onNavigate, user, onLogout, accent, mode, onSelectAccent, onToggleMode }) {
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,6 +53,59 @@ export default function LandingPage({ onNavigate, user, onLogout }) {
             <a href="#about" style={styles.navLink}>About</a>
             <a href="#drives" style={styles.navLink}>Active Drives</a>
             
+            {/* Light/Dark Mode toggle */}
+            <button
+              onClick={onToggleMode}
+              className="btn btn-secondary"
+              style={{ 
+                padding: '0.5rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                borderRadius: '50%', 
+                width: '36px', 
+                height: '36px',
+                cursor: 'pointer',
+                boxShadow: 'none',
+                marginRight: '0.4rem'
+              }}
+              title="Toggle Light/Dark Mode"
+              id="nav-mode-btn"
+            >
+              {mode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
+
+            {/* Color Accent dots */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginRight: '0.25rem' }}>
+              {['indigo', 'emerald', 'sunset'].map(a => {
+                const dotColors = {
+                  indigo: '#6366f1',
+                  emerald: '#10b981',
+                  sunset: '#f97316'
+                };
+                const active = accent === a;
+                return (
+                  <button
+                    key={a}
+                    onClick={() => onSelectAccent(a)}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: active ? '2px solid var(--text-primary)' : '2px solid transparent',
+                      background: dotColors[a],
+                      cursor: 'pointer',
+                      padding: 0,
+                      boxShadow: active ? `0 0 8px ${dotColors[a]}` : 'none',
+                      transition: 'all 0.2s',
+                      transform: active ? 'scale(1.15)' : 'scale(1)'
+                    }}
+                    title={`${a.charAt(0).toUpperCase() + a.slice(1)} Accent`}
+                  />
+                );
+              })}
+            </div>
+
             {user ? (
               <div style={styles.userActions}>
                 <button 

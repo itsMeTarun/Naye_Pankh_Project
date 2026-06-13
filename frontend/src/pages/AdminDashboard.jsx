@@ -17,7 +17,9 @@ import {
   Info,
   Layers,
   Search,
-  Check
+  Check,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -29,7 +31,7 @@ const CATEGORIES = [
   'Women Empowerment'
 ];
 
-export default function AdminDashboard({ onNavigate, user, onLogout }) {
+export default function AdminDashboard({ onNavigate, user, onLogout, accent, mode, onSelectAccent, onToggleMode }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState(null);
   const [volunteers, setVolunteers] = useState([]);
@@ -277,7 +279,7 @@ export default function AdminDashboard({ onNavigate, user, onLogout }) {
     return (
       <div className="flex-center" style={{ minHeight: '100vh', flexDirection: 'column', gap: '1rem' }}>
         <div style={styles.spinner}></div>
-        <p style={{ color: 'var(--text-secondary)' }}>Loading admin workspace...</p>
+        <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Fetching top-secret admin files... please look busy</p>
       </div>
     );
   }
@@ -305,6 +307,59 @@ export default function AdminDashboard({ onNavigate, user, onLogout }) {
           </div>
 
           <div style={styles.userInfo}>
+            {/* Light/Dark Mode toggle */}
+            <button
+              onClick={onToggleMode}
+              className="btn btn-secondary"
+              style={{ 
+                padding: '0.4rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                borderRadius: '50%', 
+                width: '36px', 
+                height: '36px',
+                cursor: 'pointer',
+                boxShadow: 'none',
+                marginRight: '0.4rem'
+              }}
+              title="Toggle Light/Dark Mode"
+              id="admin-mode-btn"
+            >
+              {mode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
+
+            {/* Color Accent dots */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginRight: '0.5rem' }}>
+              {['indigo', 'emerald', 'sunset'].map(a => {
+                const dotColors = {
+                  indigo: '#6366f1',
+                  emerald: '#10b981',
+                  sunset: '#f97316'
+                };
+                const active = accent === a;
+                return (
+                  <button
+                    key={a}
+                    onClick={() => onSelectAccent(a)}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: active ? '2px solid var(--text-primary)' : '2px solid transparent',
+                      background: dotColors[a],
+                      cursor: 'pointer',
+                      padding: 0,
+                      boxShadow: active ? `0 0 8px ${dotColors[a]}` : 'none',
+                      transition: 'all 0.2s',
+                      transform: active ? 'scale(1.15)' : 'scale(1)'
+                    }}
+                    title={`${a.charAt(0).toUpperCase() + a.slice(1)} Accent`}
+                  />
+                );
+              })}
+            </div>
+
             <div style={{ ...styles.userAvatar, background: 'var(--secondary)' }}>
               <Users size={18} color="#fff" />
             </div>
