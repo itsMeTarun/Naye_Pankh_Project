@@ -1,0 +1,135 @@
+{
+  "users": [
+    {
+      "id": "u-1",
+      "email": "admin@nayepankh.org",
+      "passwordHash": "$2a$10$qkmAK2iOn4P15lIOlac1te7q3jknGuEAInqUjsl0Hego1OwXEHCsC",
+      "role": "admin",
+      "name": "Aditi Sharma",
+      "createdAt": "2026-05-10T10:00:00.000Z"
+    },
+    {
+      "id": "u-2",
+      "email": "rahul.verma@gmail.com",
+      "passwordHash": "$2a$10$nerpLOF2JIYTBs8F6a1EUO1zk/Ay0Ra.D56kKksCbQLo7uwfRX2IW",
+      "role": "volunteer",
+      "name": "Rahul Verma",
+      "createdAt": "2026-06-01T14:30:00.000Z"
+    },
+    {
+      "id": "u-1781345046752",
+      "createdAt": "2026-06-13T10:04:06.752Z",
+      "email": "aarav.mehta@gmail.com",
+      "passwordHash": "$2a$10$OXl6RPowxOfTRHGQe391XO5UPiVsfDAHKK.L4FoppJ64OJA6nt/Ty",
+      "role": "volunteer",
+      "name": "Aarav Mehta"
+    }
+  ],
+  "volunteers": [
+    {
+      "id": "v-2",
+      "userId": "u-2",
+      "name": "Rahul Verma",
+      "phone": "+91 98765 43210",
+      "skills": [
+        "Teaching",
+        "Public Speaking",
+        "Social Media"
+      ],
+      "availability": "Weekends",
+      "interests": [
+        "Education",
+        "Child Welfare"
+      ],
+      "status": "Approved",
+      "bio": "Passionate about teaching children and helping the community grow.",
+      "hoursVolunteered": 12
+    },
+    {
+      "id": "v-1781345046753",
+      "hoursVolunteered": 0,
+      "status": "Approved",
+      "userId": "u-1781345046752",
+      "name": "Aarav Mehta",
+      "phone": "+91 99999 88888",
+      "skills": [
+        "Teaching",
+        "Event Management"
+      ],
+      "availability": "Weekends",
+      "interests": [
+        "Education",
+        "Healthcare"
+      ],
+      "bio": "I am Aarav. Enthusiastic to volunteer and help underprivileged kids."
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "o-1",
+      "title": "Education for All Campaign",
+      "description": "Teach basic mathematics, English, and science to children from underprivileged backgrounds in rural communities. All materials will be provided.",
+      "date": "2026-06-20",
+      "location": "Noida Sector 62 Learning Center",
+      "duration": "4 hours",
+      "requiredVolunteers": 15,
+      "category": "Education",
+      "status": "Active",
+      "createdAt": "2026-06-05T09:00:00.000Z"
+    },
+    {
+      "id": "o-2",
+      "title": "Weekly Food Distribution Drive",
+      "description": "Join us in packaging and distributing nutritious warm meals to shelter homes and slum areas across Delhi NCR.",
+      "date": "2026-06-25",
+      "location": "Connaught Place Community Hub",
+      "duration": "3 hours",
+      "requiredVolunteers": 25,
+      "category": "Food Relief",
+      "status": "Active",
+      "createdAt": "2026-06-06T10:30:00.000Z"
+    },
+    {
+      "id": "o-3",
+      "title": "Environment & Tree Plantation Drive",
+      "description": "Planting saplings and cleaning up local parks. Help us restore urban green cover and raise environmental awareness.",
+      "date": "2026-07-02",
+      "location": "Yamuna Biodiversity Park",
+      "duration": "5 hours",
+      "requiredVolunteers": 30,
+      "category": "Environment",
+      "status": "Active",
+      "createdAt": "2026-06-07T11:15:00.000Z"
+    },
+    {
+      "id": "o-4",
+      "title": "Free Health Screening Camp",
+      "description": "Assisting medical practitioners in organizing queue management, patient registration, and distributing free basic medicines.",
+      "date": "2026-06-18",
+      "location": "Ghaziabad Slum Clinic",
+      "duration": "6 hours",
+      "requiredVolunteers": 10,
+      "category": "Healthcare",
+      "status": "Active",
+      "createdAt": "2026-06-08T12:00:00.000Z"
+    }
+  ],
+  "applications": [
+    {
+      "id": "a-1",
+      "volunteerId": "v-2",
+      "opportunityId": "o-1",
+      "status": "Completed",
+      "hoursLogged": 8,
+      "appliedAt": "2026-06-02T15:00:00.000Z"
+    },
+    {
+      "id": "a-2",
+      "volunteerId": "v-2",
+      "opportunityId": "o-2",
+      "status": "Approved",
+      "hoursLogged": 4,
+      "appliedAt": "2026-06-04T10:00:00.000Z"
+    }
+  ]
+}
