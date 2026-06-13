@@ -177,7 +177,7 @@ export default function Auth({ onNavigate, onLoginSuccess }) {
               className="form-input" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
-              placeholder="e.g. name@gmail.com"
+              placeholder="admin@nayepankh.org"
               required
               id="input-email"
             />
@@ -190,7 +190,7 @@ export default function Auth({ onNavigate, onLoginSuccess }) {
               className="form-input" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
-              placeholder="Enter password"
+              placeholder="admin123"
               required
               id="input-password"
             />
