@@ -685,7 +685,7 @@ export default function VolunteerDashboard({ onNavigate, user, onLogout, accent,
                       {/* Signatures */}
                       <div style={styles.certFooter}>
                         <div style={styles.signatureBlock}>
-                          <div style={styles.sigLine}>Aditi Sharma</div>
+                          <div style={styles.sigLine}>admin</div>
                           <span style={styles.sigTitle}>Founder & President</span>
                         </div>
                         <div style={styles.certDateBlock}>
