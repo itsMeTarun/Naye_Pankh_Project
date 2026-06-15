@@ -497,10 +497,10 @@ export default function AdminDashboard({ onNavigate, user, onLogout, accent, mod
                   <div style={styles.chartContainer}>
                     <svg viewBox="0 0 350 200" style={styles.svgChart}>
                       {/* Grid Lines */}
-                      <line x1="40" y1="20" x2="330" y2="20" stroke="rgba(255,255,255,0.05)" />
-                      <line x1="40" y1="70" x2="330" y2="70" stroke="rgba(255,255,255,0.05)" />
-                      <line x1="40" y1="120" x2="330" y2="120" stroke="rgba(255,255,255,0.05)" />
-                      <line x1="40" y1="170" x2="330" y2="170" stroke="rgba(255,255,255,0.1)" />
+                      <line x1="40" y1="20" x2="330" y2="20" stroke="var(--border-color)" />
+                      <line x1="40" y1="70" x2="330" y2="70" stroke="var(--border-color)" />
+                      <line x1="40" y1="120" x2="330" y2="120" stroke="var(--border-color)" />
+                      <line x1="40" y1="170" x2="330" y2="170" stroke="var(--border-color)" />
 
                       {/* X and Y Axis Values */}
                       <text x="15" y="25" fill="var(--text-muted)" fontSize="10">3</text>
@@ -533,7 +533,7 @@ export default function AdminDashboard({ onNavigate, user, onLogout, accent, mod
                               style={{ transition: 'all 0.5s ease-out' }}
                             />
                             {/* Value label */}
-                            <text x={x + 20} y={y - 8} fill="#fff" fontSize="11" fontWeight="600" textAnchor="middle">
+                            <text x={x + 20} y={y - 8} fill="var(--text-primary)" fontSize="11" fontWeight="600" textAnchor="middle">
                               {month.count}
                             </text>
                             {/* Month label */}
@@ -1295,7 +1295,7 @@ const styles = {
     fontSize: '1.5rem',
     fontWeight: '700',
     fontFamily: 'var(--font-heading)',
-    color: '#fff',
+    color: 'var(--text-primary)',
     marginTop: '0.2rem',
   },
   chartsGrid: {
